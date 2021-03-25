@@ -1,0 +1,71 @@
+---
+title: "Data-Processing"
+author: "Arnab Dey"
+date: "2/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Global stuff
+
+```{r load-packages, warning=FALSE}
+library(qualtRics)
+library(summarytools)
+library(tidyverse)
+library(stringr)
+```
+
+# Load Data
+
+## Access Qualtrics Data 
+
+```{r connect-to-qualtrics}
+apikey="hL9ew7XqwL80gXy4Y6qdOLWNld1xXSKLMNLZJsc7"
+baseurl="ucsd.co1.qualtrics.com"
+qualtrics_api_credentials(api_key =apikey,base_url =baseurl, overwrite=TRUE,install = T)
+(readRenviron("~/.Renviron")) # so that you can use credentials without restarting R
+```
+
+```{r load-data, message=FALSE,warning=FALSE}
+surveys<-all_surveys()
+all_measures <- fetch_survey(surveyID = "SV_aYnKJLduguA1D7v",verbose = TRUE, force_request = T)
+all_measures <- all_measures %>% 
+  mutate(measure_id = str_to_lower(Q147_1))
+```
+
+## Get list of published  measures
+```{r list of published measures}
+measures_pub <- read.csv(url("https://emerge.ucsd.edu/measures-urls.php"), header = F)
+colnames(measures_pub) <- "measure_id"
+```
+
+## Filter cases to select published measures
+```{r}
+df_measures <- all_measures %>% 
+  semi_join(measures_pub, by = "measure_id")
+```
+
+## Select useful variables
+```{r}
+df_measures <- df_measures %>% 
+  select(measure_id, )
+```
+
+
+
+```{r}
+a <- str_to_lower(all_measures$Q147_1)
+
+b <- setdiff(a, measures_pub$V1)
+b <- intersect(a, measures_pub$V1)
+
+length(b)
+
+measures_pub %>% 
+  anti_join(all_measures, by = "measure_id")
+
+```
+
