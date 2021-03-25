@@ -31,7 +31,8 @@ qualtrics_api_credentials(api_key =apikey,base_url =baseurl, overwrite=TRUE,inst
 
 ```{r load-data, message=FALSE,warning=FALSE}
 surveys<-all_surveys()
-all_measures <- fetch_survey(surveyID = "SV_aYnKJLduguA1D7v",verbose = TRUE, force_request = T)
+all_measures <- fetch_survey(surveyID = "SV_aYnKJLduguA1D7v",verbose = TRUE, force_request = T, 
+                             convert = FALSE, add_var_labels = FALSE, breakout_sets = FALSE)
 all_measures <- all_measures %>% 
   mutate(measure_id = str_to_lower(Q147_1))
 ```
@@ -40,30 +41,69 @@ all_measures <- all_measures %>%
 ```{r list of published measures}
 measures_pub <- read.csv(url("https://emerge.ucsd.edu/measures-urls.php"), header = F)
 colnames(measures_pub) <- "measure_id"
+measures_pub$measure_id <- unique(measures_pub$measure_id)
 ```
 
 ## Filter cases to select published measures
 ```{r}
-df_measures <- all_measures %>% 
+df_measures_filtered <- all_measures %>% 
   semi_join(measures_pub, by = "measure_id")
+
 ```
 
 ## Select useful variables
 ```{r}
+
+df_measures <- df_measures_filtered %>% 
+  select(measure_id, 
+         title = Q62, 
+         citation_freq = Q68,
+         multi_country = Q81,
+         short_measure = SHORTMEASURE,
+         psych_score = Q120,
+         countries = Q77,
+         dim_psych_emp = Q122,
+         dim_soc_emp = Q123,
+         dim_edu = Q124,
+         dim_legal = Q125,
+         dim_political = Q126,
+         dim_hh_rel = Q127,
+         dim_env = Q128,
+         dim_time = Q129,
+         dim_gbv = Q130,
+         dim_wee = Q131,
+         dim_health = Q132,
+         dim_mnch = Q134,
+         dim_srh = Q135)
+```
+
+# Identify and remove duplicated values
+```{r}
 df_measures <- df_measures %>% 
-  select(measure_id, )
+  mutate(duplicated = duplicated(measure_id)) %>% 
+  filter(duplicated != TRUE)
+
+```
+
+# Clean the measures dataframe
+```{r}
+# Function to replace "None apply" with NA
+rep_na <- function(x) (ifelse(x == "None apply", NA, x))
+
+# clean variables
+df_measures <- df_measures %>% 
+  mutate(title = str_to_upper(title)) %>% 
+  mutate(short_measure = ifelse(short_measure == "No - Not a Short Measure" | 
+                                  short_measure == "Uncategorized", 
+                                  "No", "Yes")) %>% 
+  mutate_at(vars(starts_with("dim")), rep_na)
+
 ```
 
 
+# Need to discuss this with Gennifer
 
 ```{r}
-a <- str_to_lower(all_measures$Q147_1)
-
-b <- setdiff(a, measures_pub$V1)
-b <- intersect(a, measures_pub$V1)
-
-length(b)
-
 measures_pub %>% 
   anti_join(all_measures, by = "measure_id")
 
