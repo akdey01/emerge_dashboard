@@ -1,0 +1,128 @@
+---
+title: "Dashboard-Visualizations"
+author: "Arnab Dey"
+date: "3/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Gloal stuff
+
+```{r load packages, message=FALSE}
+library(tidyverse)
+library(janitor)
+library(wordcloud)
+library(tm)
+library(RColorBrewer)
+library(SnowballC)
+```
+
+# Wordcloud
+## Create Dataframe
+
+### Load data as corpus
+```{r}
+text = df_measures$title
+docs = Corpus(VectorSource(text)) 
+#inspect(docs)
+```
+
+### Text transportation
+```{r}
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, "", x))
+docs1 = tm_map(docs, toSpace, "-")
+docs1 = tm_map(docs1, toSpace, "\\(")
+docs1 = tm_map(docs1, toSpace, "\\)")
+docs1 = tm_map(docs1, toSpace, ":")
+docs1 = tm_map(docs1, toSpace, "|")
+docs1 = tm_map(docs1, toSpace, "/")
+inspect(docs1)
+```
+
+## Clean text
+```{r}
+# Remove numbers
+docs2 <- tm_map(docs1, removeNumbers)
+# Remove english common stopwords
+docs2 <- tm_map(docs2, removeWords, stopwords("english"))
+# Remove your own stop word
+docs2 <- tm_map(docs2, removeWords, c("and", "AND")) 
+# Remove punctuations
+docs2 <- tm_map(docs2, removePunctuation)
+inspect(docs2)
+```
+
+
+```{r}
+dtm <- TermDocumentMatrix(docs2)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+```
+
+
+## Plot - Wordcloud - All
+```{r}
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=150, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+```
+
+
+
+# Bargraph
+
+## Bargraph for all measures
+
+## Create dataframe
+```{r create dataframe}
+
+Dimensions <- c("Psychological \nEmpowerment",
+                "Social \nEmpowerment",
+                "Education",
+                "Legal",
+                "Political",
+                "Household / \nIntrafamilial Relations",
+                "Environment and \nSustainability",
+                "Time Poverty",
+                "Gender Based \nViolence",
+                "Women's Economic \nEmpowerment",
+                "Health",
+                "Maternal and \nChild Health",
+                "SRH and \nFamily Planning",
+                "All Measures")
+
+num_measures <- unlist(df_measures %>% select(starts_with("dim")) %>% map(~sum(!is.na(.)))) 
+num_measures <- c(num_measures, nrow(df_measures))
+df_bar_all <- as.tibble(cbind(Dimensions, num_measures))
+
+df_bar_all <- df_bar_all %>% 
+  mutate(num_measures = as.numeric(num_measures))
+```
+
+## Plot - Bargraph for all measures
+```{r}
+plot_bar_all <- ggplot(df_bar_all, aes(fct_reorder(Dimensions, num_measures) , num_measures)) + 
+  geom_bar(stat = "identity", width = 0.9, fill = "#157067") + 
+  geom_text(aes(label = num_measures), size = 3, vjust = -0.5, color = "black") +
+  xlab("Dimensions") + 
+  ylab("Number of measures on EMERGE") + 
+  theme_minimal()
+  
+plot_bar_all
+
+```
+
+
+```{r}
+ggsave(filename="Figures/bar_all.png", plot = plot_bar_all, width=5.5, height=5.5, dpi=300)
+```
+
+
+# Chloropleth
