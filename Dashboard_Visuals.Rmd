@@ -18,6 +18,7 @@ library(wordcloud)
 library(tm)
 library(RColorBrewer)
 library(SnowballC)
+library(rgdal)
 ```
 
 # Wordcloud
@@ -125,89 +126,97 @@ plot_bar_all
 ## Create table with count of measures by country 
 ```{r}
 
-country_list <- df_measures %>% dplyr::select(countries) %>% dplyr::filter(!is.na(countries))
+# Create a list of countries in the database as strings
+country_list <- df_measures %>% 
+  select(countries_spdf) %>% 
+  filter(!is.na(countries_spdf))
 
-old_countries <- c("Congo, Democratic Republic of the", "Congo, Republic of the", "Micronesia, Federated States of", "Korea, South")
-new_countries <- c("Democratic Republic of the Congo", "Republic of the Congo", "Federated States of Micronesia", "South Korea")
-
-country_list$countries <- stringr::str_replace_all(country_list$countries, 
-                                                   "Congo, Democratic Republic of the", 
-                                                   "Democratic Republic of the Congo")
-
-country_list$countries <- stringr::str_replace_all(country_list$countries, 
-                                                   "Congo, Republic of the", 
-                                                   "Republic of the Congo")
-
-country_list$countries <- stringr::str_replace_all(country_list$countries, 
-                                                   "Micronesia, Federated States of", 
-                                                   "Federated States of Micronesia")
-
-country_list$countries <- stringr::str_replace_all(country_list$countries, 
-                                                   "Korea, South", 
-                                                   "South Korea")
-
-country_list$countries <- stringr::str_replace_all(country_list$countries, 
-                                                   "Korea, North", 
-                                                   "North Korea")
-
-
-df_countries <- as.data.frame(unlist(strsplit(country_list$countries, ",")))
-
+# Create a dataframe with individual countries
+df_countries <- as.data.frame(unlist(strsplit(country_list$countries_spdf, ",")))
 colnames(df_countries) <- "countries"
 
-df_countries_n <- df_countries %>% 
-  dplyr::count(countries)
+
+## Match a few remaining countries 
+df_countries$countries <- str_replace_all(df_countries$countries, 
+                                          "Micronesia", 
+                                          "Micronesia, Federated States of")
+df_countries$countries <- str_replace_all(df_countries$countries, 
+                                          "North Korea", 
+                                          "Korea, Democratic People's Republic of")
+df_countries$countries <- str_replace_all(df_countries$countries, 
+                                          "South Korea", 
+                                          "Korea, Republic of")
+
+
+# Create a dataframe of countries with number of measures in each country
+df_countries_n <- df_countries %>% count(countries)
+colnames(df_countries_n) <- c("NAME", "num_measures")
+
+# write.csv(df_countries_n, "countries_qualtrics.csv")
 
 ```
 
-## Merge the shape file with the Country_measure file
-```{r}
-df_shape <- as.data.frame(my_spdf@data$NAME)
-colnames(df_shape) <- "countries"
+## Load the geoJason file
 
-df_shape_match <- df_shape %>% 
-  dplyr::anti_join(df_countries_n, by = "countries")
-
-```
-
-## plot worldmap
 ```{r}
 # Read this shape file with the rgdal library. 
-library(rgdal)
-install.packages("rgdal")
-
-dsn= paste0(getwd(),"/geoDATA/world_shape_file/")
-
-my_spdf <- readOGR( 
+world_spdf <- readOGR( 
   dsn= paste0(getwd(),"/geoDATA/world_shape_file") , 
   layer="TM_WORLD_BORDERS_SIMPL-0.3",
   verbose = FALSE)
 
-plot(my_spdf, xlim=c(-20,60) , ylim=c(-60,100))
-
-a <- rnorm(246, 15, 25)
-
-my_spdf@data$measures <- a
-
-# Palette of 30 colors
-library(RColorBrewer)
-my_colors <- brewer.pal(9, "PuBuGn") 
-my_colors <- colorRampPalette(my_colors)(30)
-
-# Attribute the appropriate color to each country
-class_of_country <- cut(my_spdf@data$measures, 30)
-my_colors <- my_colors[as.numeric(class_of_country)]
-
-# Make the plot
-plot(my_spdf , xlim=c(-20,60) , ylim=c(-80,80), col=my_colors ,  bg = "#A6CAE0")
-
+# spdf_countries <- as.data.frame(world_spdf@data$NAME)
+# write.csv(spdf_countries, "spdf_countries.csv")
 ```
 
 
-# Save Files
-```{r save files}
-ggsave(filename="Figures/bar_all.png", plot = plot_bar_all, width=10.5, height=5.5, dpi=150)
+## Merge the shape file with the Country_measure file
+
+```{r}
+world_spdf@data <- world_spdf@data %>% 
+  left_join(df_countries_n, by = "NAME") %>% 
+  mutate(num_measures = ifelse(is.na(num_measures), 0, num_measures))
+
+# View(world_spdf@data)
 ```
 
 
+## Plot the chloropleth
+
+```{r}
+# Create a color palette with handmade bins.
+mybins <- c(0,10,20,50,100,500)
+mypalette <- colorBin( palette="YlOrBr", domain=world_spdf@data$num_measures, na.color="transparent", bins=mybins)
+ 
+# Prepare the text for tooltips:
+mytext <- paste(
+    "Country: ", world_spdf@data$NAME,"<br/>", 
+    "Number of measures: ", world_spdf@data$num_measures, 
+    sep="") %>%
+  lapply(htmltools::HTML)
+ 
+# Final Map
+leaflet(world_spdf) %>% 
+  addTiles(options = providerTileOptions(minZoom = 1, maxZoom = 3))  %>% 
+  setView(lat=10, lng=0 , zoom=2) %>%
+  addPolygons( 
+    fillColor = ~mypalette(num_measures), 
+    stroke=TRUE, 
+    fillOpacity = 0.9, 
+    color="white", 
+    weight=0.3,
+    label = mytext,
+    labelOptions = labelOptions( 
+      style = list("font-weight" = "normal", padding = "3px 8px"), 
+      textsize = "13px", 
+      direction = "auto"
+    )
+  ) %>%
+  addLegend( pal=mypalette, values=~num_measures, opacity=0.9, title = "Number of measures", 
+             position = "bottomleft" )
+  
+# save the widget in a html file if needed.
+# library(htmlwidgets)
+# saveWidget(m, file=paste0( getwd(), "/HtmlWidget/choroplethLeaflet5.html"))
+```
 
