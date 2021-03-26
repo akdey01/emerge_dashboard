@@ -96,16 +96,63 @@ df_measures <- df_measures %>%
   mutate(short_measure = ifelse(short_measure == "No - Not a Short Measure" | 
                                   short_measure == "Uncategorized", 
                                   "No", "Yes")) %>% 
-  mutate_at(vars(starts_with("dim")), rep_na)
-
+  mutate_at(vars(starts_with("dim")), rep_na) %>% 
+  mutate(countries_spdf = countries) %>% 
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Congo, Democratic Republic of the", 
+                                      "Democratic Republic of the Congo")) %>% 
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Congo, Republic of the", "Congo")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Micronesia, Federated States of", "Micronesia")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Korea, South", "South Korea")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Korea, North", "North Korea")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Samoa", "American Samoa")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "The Bahamas", "Bahamas")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Brunei", "Brunei Darussalam")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Myanmar \\(Burma\\)", "Burma")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "The Gambia", "Gambia")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Iran", "Iran (Islamic Republic of)")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Laos", "Lao People's Democratic Republic")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Libya", "Libyan Arab Jamahiriya")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Moldova", "Republic of Moldova")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Syria", "Syrian Arab Republic")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Macedonia", "The former Yugoslav Republic of Macedonia")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "East Timor \\(Timor-Leste\\)", "Timor-Leste")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Tanzania", "United Republic of Tanzania")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Vietnam", "Viet Nam")) %>% 
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "United States of America", "United States")) %>%
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Vatican City \\(Holy See\\)", "Holy See (Vatican City)")) %>% 
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "South Sudan", "Sudan")) %>% 
+  mutate(countries_spdf = str_replace_all(countries_spdf, 
+                                      "Kosovo", "Serbia"))
 ```
 
 
 # Need to discuss this with Gennifer
 
 ```{r}
-measures_pub %>% 
-  anti_join(all_measures, by = "measure_id")
+# measures_pub %>% 
+#   anti_join(all_measures, by = "measure_id")
 
 ```
 
