@@ -23,16 +23,17 @@ ui <- fluidPage(
         )
     ),
     fluidRow(
-        column(6, plotOutput("word_cloud")),
-        column(6, plotOutput("measures_count"))
+        column(4, plotOutput("word_cloud")),
+        column(8, plotOutput("measures_count"))
     ),
     fluidRow(
-        column(12, plotOutput("world_map"))
+        column(12, leafletOutput("world_map"))
     )
 )
     
 # Server stuff
 server <- function(input, output) {
+    
     
     ## Create the dataframe for plots
     df_selected <- reactive({
@@ -43,6 +44,7 @@ server <- function(input, output) {
         res       
     })
     
+    # All plot dataframes 
     ## Create dataframe for wordcloud
     df_wordcloud <- reactive({
         getTermMatrix(df_selected())
@@ -70,8 +72,12 @@ server <- function(input, output) {
     
     
     ## Create dataframe for chloropleth
+    df_world_map <- reactive({
+        getCountrydata(df_selected())
+    })
     
     
+    # All Outputs
     output$word_cloud <- renderPlot({
         v <- df_wordcloud()
         wordcloud(words = v$word, freq = v$freq, min.freq = 1,
@@ -89,6 +95,34 @@ server <- function(input, output) {
             theme_minimal()
     }
     )
+    
+    
+    output$world_map <- renderLeaflet({
+        
+        # Prepare the text for tooltips:
+        mytext <- paste(
+            "Country: ", df_world_map()@data$NAME,"<br/>", 
+            "Number of measures: ", df_world_map()@data$num_measures, 
+            sep="") %>%
+            lapply(htmltools::HTML)
+        
+        # Final Map
+        leaflet(df_world_map()) %>% 
+            addTiles(options = providerTileOptions(minZoom = 1, maxZoom = 3))  %>% 
+            setView(lat=10, lng=0 , zoom=2) %>%
+            addPolygons( 
+                stroke=FALSE, 
+                fillOpacity = 0.5,
+                smoothFactor = 0.5,
+                color = ~colorNumeric("YlOrRd", num_measures)(num_measures),
+                label = mytext,
+                labelOptions = labelOptions( 
+                    style = list("font-weight" = "normal", padding = "3px 8px"), 
+                    textsize = "13px", 
+                    direction = "auto"
+                )
+            ) 
+    })
     
 }
 
