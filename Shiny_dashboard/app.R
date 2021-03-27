@@ -11,6 +11,9 @@ library(shiny)
 library(memoise)
 library(tm)
 library(wordcloud)
+library(leaflet)
+library(RColorBrewer)
+library(rgdal)
 
 # UI stuff
 
@@ -25,7 +28,7 @@ ui <- fluidPage(
                 "Psychometric Score", choices = psych_scores)),
         column(3,selectInput("cite", 
                 "Citation Frequency", choices = citation_scores)),
-        column(3,selectInput("multi", 
+        column(3,selectInput("multi_country", 
                 "Multi-Country", choices = multi_country)),
         column(3,selectInput("short", 
                 "Short Measure", choices = short_measure))
@@ -46,9 +49,72 @@ server <- function(input, output) {
     ## Create the dataframe for plots
     df_selected <- reactive({
         
-        if(input$psych == "All") {res <- df_measures} 
-            else {res <- df_measures %>% filter(psych_score == input$psych)}
-        
+        if(input$psych == "All" & input$cite == "All" & 
+           input$multi_country == "All" & input$short == "All")  {
+            res <- df_measures
+            } else if (input$psych == "All" & input$cite == "All" & 
+                input$multi_country == "All" & input$short != "All") {
+                res <- df_measures %>% filter(short_measure == input$short)    
+                } else if (input$psych == "All" & input$cite == "All" & 
+                    input$multi_country != "All" & input$short == "All") {
+                    res <- df_measures %>% filter(multi_country == input$multi_country)
+                } else if (input$psych == "All" & input$cite == "All" & 
+                    input$multi_country != "All" & input$short != "All") {
+                    res <- df_measures %>% filter(multi_country == input$multi_country,
+                                                  short_measure == input$short)
+                } else if (input$psych == "All" & input$cite != "All" & 
+                    input$multi_country == "All" & input$short == "All") {
+                    res <- df_measures %>% filter(citation_freq == input$cite)
+                } else if (input$psych == "All" & input$cite != "All" & 
+                    input$multi_country == "All" & input$short != "All") {
+                    res <- df_measures %>% filter(citation_freq == input$cite,
+                                                  short_measure == input$short)
+                } else if (input$psych == "All" & input$cite != "All" & 
+                    input$multi_country != "All" & input$short == "All") {
+                    res <- df_measures %>% filter(citation_freq == input$cite,
+                                                  multi_country == input$multi_country)
+                } else if (input$psych == "All" & input$cite != "All" & 
+                           input$multi_country != "All" & input$short != "All") {
+                    res <- df_measures %>% filter(citation_freq == input$cite,
+                                                  multi_country == input$multi_country,
+                                                  short_measure == input$short)
+                } else if(input$psych != "All" & input$cite == "All" & 
+                          input$multi_country == "All" & input$short == "All")  {
+                    res <- df_measures %>% filter(psych_score == input$psych)
+                } else if (input$psych != "All" & input$cite == "All" & 
+                           input$multi_country == "All" & input$short != "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych, 
+                                                  short_measure == input$short)    
+                } else if (input$psych != "All" & input$cite == "All" & 
+                           input$multi_country != "All" & input$short == "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych,
+                                                  multi_country == input$multi_country)
+                } else if (input$psych != "All" & input$cite == "All" & 
+                           input$multi_country != "All" & input$short != "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych,
+                                                  multi_country == input$multi_country,
+                                                  short_measure == input$short)
+                } else if (input$psych != "All" & input$cite != "All" & 
+                           input$multi_country == "All" & input$short == "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych,
+                                                  citation_freq == input$cite)
+                } else if (input$psych != "All" & input$cite != "All" & 
+                           input$multi_country == "All" & input$short != "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych,
+                                                  citation_freq == input$cite,
+                                                  short_measure == input$short)
+                } else if (input$psych != "All" & input$cite != "All" & 
+                           input$multi_country != "All" & input$short == "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych,
+                                                  citation_freq == input$cite,
+                                                  multi_country == input$multi_country)
+                } else if (input$psych != "All" & input$cite != "All" & 
+                           input$multi_country != "All" & input$short != "All") {
+                    res <- df_measures %>% filter(psych_score == input$psych,
+                                                  citation_freq == input$cite,
+                                                  multi_country == input$multi_country,
+                                                  short_measure == input$short)
+                }
         res       
     })
     
