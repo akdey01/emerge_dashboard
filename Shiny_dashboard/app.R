@@ -15,13 +15,21 @@ library(wordcloud)
 # UI stuff
 
 psych_scores <- c("All", "No Data", "High", "Medium", "Low")
+citation_scores <- c("All", "No Data", "High", "Medium", "Low")
+multi_country <- c("All", "No", "Yes")
+short_measure <- c("All", "No", "Yes")
 
 ui <- fluidPage(
     fluidRow(
-        column(6,
-               selectInput("psych", "Psychometric Score", choices = psych_scores)
-        )
-    ),
+        column(3,selectInput("psych", 
+                "Psychometric Score", choices = psych_scores)),
+        column(3,selectInput("cite", 
+                "Citation Frequency", choices = citation_scores)),
+        column(3,selectInput("multi", 
+                "Multi-Country", choices = multi_country)),
+        column(3,selectInput("short", 
+                "Short Measure", choices = short_measure))
+        ),
     fluidRow(
         column(4, plotOutput("word_cloud")),
         column(8, plotOutput("measures_count"))
